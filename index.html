@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f1115;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 16px;
+  }
+  .calc {
+    width: 100%;
+    max-width: 340px;
+    background: #1a1d24;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.6);
+  }
+  .screen {
+    background: #0b0d11;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: right;
+    margin-bottom: 14px;
+    min-height: 92px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .history {
+    color: #5c6470;
+    font-size: 15px;
+    min-height: 20px;
+    word-wrap: break-word;
+  }
+  .result {
+    color: #fff;
+    font-size: 38px;
+    font-weight: 600;
+    word-wrap: break-word;
+    line-height: 1.1;
+  }
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  button {
+    border: none;
+    border-radius: 14px;
+    padding: 18px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    background: #2a2f3a;
+    cursor: pointer;
+    transition: transform .06s, background .15s;
+    user-select: none;
+  }
+  button:active { transform: scale(.95); }
+  button:hover { background: #333a47; }
+  .op { background: #2f6df6; }
+  .op:hover { background: #3d7bff; }
+  .fn { background: #3a4150; color: #ffd166; }
+  .fn:hover { background: #454d5e; }
+  .eq { background: #22c55e; grid-column: span 2; }
+  .eq:hover { background: #2ee06b; }
+  .zero { grid-column: span 2; }
+</style>
+</head>
+<body>
+  <div class="calc">
+    <div class="screen">
+      <div class="history" id="history"></div>
+      <div class="result" id="result">0</div>
+    </div>
+    <div class="keys">
+      <button class="fn" data-act="clear">C</button>
+      <button class="fn" data-act="back">⌫</button>
+      <button class="fn" data-act="percent">%</button>
+      <button class="op" data-op="/">÷</button>
+
+      <button data-num="7">7</button>
+      <button data-num="8">8</button>
+      <button data-num="9">9</button>
+      <button class="op" data-op="*">×</button>
+
+      <button data-num="4">4</button>
+      <button data-num="5">5</button>
+      <button data-num="6">6</button>
+      <button class="op" data-op="-">−</button>
+
+      <button data-num="1">1</button>
+      <button data-num="2">2</button>
+      <button data-num="3">3</button>
+      <button class="op" data-op="+">+</button>
+
+      <button class="zero" data-num="0">0</button>
+      <button data-num=".">,</button>
+      <button class="eq" data-act="equals">=</button>
+    </div>
+  </div>
+
+<script>
+  const resultEl = document.getElementById('result');
+  const historyEl = document.getElementById('history');
+
+  let current = '0';
+  let prev = null;
+  let op = null;
+  let fresh = true;
+
+  function render() {
+    resultEl.textContent = current.replace('.', ',');
+    historyEl.textContent = prev !== null && op ? prev.replace('.', ',') + ' ' + opSymbol(op) : '';
+  }
+  function opSymbol(o) {
+    return { '+': '+', '-': '−', '*': '×', '/': '÷' }[o] || o;
+  }
+  function inputNum(n) {
+    if (fresh) { current = n === '.' ? '0.' : n; fresh = false; }
+    else {
+      if (n === '.' && current.includes('.')) return;
+      if (current === '0' && n !== '.') current = n;
+      else current += n;
+    }
+    render();
+  }
+  function calc(a, b, o) {
+    a = parseFloat(a); b = parseFloat(b);
+    switch (o) {
+      case '+': return a + b;
+      case '-': return a - b;
+      case '*': return a * b;
+      case '/': return b === 0 ? 'Ошибка' : a / b;
+    }
+    return b;
+  }
+  function setOp(o) {
+    if (op && !fresh) {
+      const r = calc(prev, current, op);
+      if (r === 'Ошибка') { current = 'Ошибка'; prev = null; op = null; fresh = true; render(); return; }
+      current = String(Math.round(r * 1e10) / 1e10);
+    }
+    prev = current;
+    op = o;
+    fresh = true;
+    render();
+  }
+  function equals() {
+    if (op === null || prev === null) return;
+    const r = calc(prev, current, op);
+    historyEl.textContent = prev.replace('.', ',') + ' ' + opSymbol(op) + ' ' + current.replace('.', ',') + ' =';
+    current = r === 'Ошибка' ? 'Ошибка' : String(Math.round(r * 1e10) / 1e10);
+    prev = null; op = null; fresh = true;
+    resultEl.textContent = current.replace('.', ',');
+  }
+  function clearAll() {
+    current = '0'; prev = null; op = null; fresh = true; render();
+  }
+  function back() {
+    if (fresh) return;
+    current = current.length > 1 ? current.slice(0, -1) : '0';
+    if (current === '-') current = '0';
+    render();
+  }
+  function percent() {
+    current = String(parseFloat(current) / 100);
+    render();
+  }
+
+  document.querySelectorAll('[data-num]').forEach(b =>
+    b.addEventListener('click', () => inputNum(b.dataset.num)));
+  document.querySelectorAll('[data-op]').forEach(b =>
+    b.addEventListener('click', () => setOp(b.dataset.op)));
+  document.querySelectorAll('[data-act]').forEach(b =>
+    b.addEventListener('click', () => {
+      const a = b.dataset.act;
+      if (a === 'clear') clearAll();
+      else if (a === 'back') back();
+      else if (a === 'percent') percent();
+      else if (a === 'equals') equals();
+    }));
+
+  document.addEventListener('keydown', e => {
+    if (e.key >= '0' && e.key <= '9') inputNum(e.key);
+    else if (e.key === '.' || e.key === ',') inputNum('.');
+    else if (['+', '-', '*', '/'].includes(e.key)) setOp(e.key);
+    else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); equals(); }
+    else if (e.key === 'Backspace') back();
+    else if (e.key === 'Escape') clearAll();
+    else if (e.key === '%') percent();
+  });
+
+  render();
+</script>
+</body>
+</html>
