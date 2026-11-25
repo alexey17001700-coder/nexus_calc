@@ -1,2 +1,2 @@
-# nexus_calc
+# wlupidol_calc
 Калькулятор
